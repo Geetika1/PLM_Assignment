@@ -1,0 +1,90 @@
+---
+title: "PracMachineLearning"
+author: "Geetika G"
+date: "January 31, 2016"
+output: html_document
+---
+# Background
+
+This is the document for the practical machine learning assignment. In this assignment, I have loaded the data, created the partition sets, used the models and cross validated them to make sure the model with the best accuracy is chosen. I have then applied that model to the test data to apply those to the 20 scenarios and get the quiz responses.
+
+Loading the required libraries and data
+
+```{r}
+library(tree)
+library(caret)
+
+setwd("/Users/geetikagangwani/Downloads/.")
+getwd()
+data_train <- read.csv("pml-training.csv", header = TRUE, na.strings = c("NA", "#DIV/0!", ""))
+data_test <- read.csv("pml-testing.csv", header = TRUE, na.strings = c("NA", "#DIV/0!", ""))
+
+dim(data_train)
+
+```
+
+Removing the information columns, not needed for our analysis
+
+```{r}
+data_train <- data_train[, 7:160]
+data_test <- data_test[, 7:160]
+```
+
+Removing any data that has NA
+
+```{r}
+is_data  <- apply(!is.na(data_train), 2, sum) >19621
+data_train <- data_train[, is_data]
+data_test <- data_test[, is_data]
+```
+
+Partitioning the training data into training and testing. Using 70% of the data to be traingin and 30% to be testing.
+
+```{r}
+set.seed(10001)
+inTrain = createDataPartition(y = data_train$classe, p = 0.7, list = FALSE)
+sample_train <- data_train[inTrain, ]
+sample_test <- data_train[-inTrain, ]
+```
+
+# Analysis
+
+## 1. First using the rpart model to analyze the data
+
+```{r}
+modFit <- train(classe ~ ., method = "rpart", data = sample_train)
+print(modFit$finalModel)
+```
+
+## Cross Validation
+```{r}
+pred_rpart = predict(modFit, sample_test)
+confusionMatrix(pred_rpart,sample_test$classe)$overall["Accuracy"]
+```
+
+0.5 is not very accurate, hence we cannot rely on this model to calculate the result.
+
+## 2. Random forest method
+
+
+```{r}
+require(randomForest)
+set.seed(10002)
+rf_train = randomForest(classe ~ ., data = data_train)
+rf_train
+plot(rf_train)
+```
+
+
+## Cross Validation
+```{r}
+rf_pred = predict(rf_train, sample_test)
+confusionMatrix(rf_pred,sample_test$classe)$overall["Accuracy"]
+```
+
+This is a very accurate model and will be used to the testing data to predict the result
+
+```{r}
+quiz <- predict(rf_train, data_test)
+quiz
+```
